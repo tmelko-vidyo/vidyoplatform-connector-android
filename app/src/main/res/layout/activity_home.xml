@@ -97,13 +97,13 @@
         android:textSize="@dimen/mini_ts" />
 
     <Button
-        android:id="@+id/custom_layout"
+        android:id="@+id/start_conference"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:layout_margin="@dimen/material_margin"
         android:layout_marginTop="@dimen/material_margin"
-        android:onClick="onCustomChoice"
+        android:onClick="onStartConference"
         android:padding="@dimen/material_margin"
-        android:text="@string/custom_layouts" />
+        android:text="@string/start_conference" />
 </LinearLayout>

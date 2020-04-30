@@ -64,7 +64,7 @@ public class HomeActivity extends AppCompatActivity {
         note.setText(Html.fromHtml(getString(R.string.note)));
     }
 
-    public void onCustomChoice(View view) {
+    public void onStartConference(View view) {
         Intent start = new Intent(this, VideoConferenceActivity.class);
 
         start.putExtra(VideoConferenceActivity.PORTAL_KEY, portal.getText().toString());
@@ -94,8 +94,8 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void enable(boolean enable) {
-        findViewById(R.id.custom_layout).setEnabled(enable);
-        findViewById(R.id.custom_layout).setAlpha(enable ? 1f : 0.2f);
+        findViewById(R.id.start_conference).setEnabled(enable);
+        findViewById(R.id.start_conference).setAlpha(enable ? 1f : 0.2f);
     }
 
     @Override
