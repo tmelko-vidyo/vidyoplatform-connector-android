@@ -4,6 +4,8 @@ import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Point;
 import android.os.Bundle;
+import android.os.Handler;
+import android.text.format.DateUtils;
 import android.view.Display;
 import android.view.View;
 import android.view.WindowManager;
@@ -17,8 +19,9 @@ import com.vidyo.VidyoClient.Connector.Connector;
 import com.vidyo.VidyoClient.Connector.ConnectorPkg;
 import com.vidyo.VidyoClient.Device.Device;
 import com.vidyo.VidyoClient.Device.LocalCamera;
+import com.vidyo.VidyoClient.Endpoint.LogRecord;
 import com.vidyo.vidyoconnector.event.ControlEvent;
-import com.vidyo.vidyoconnector.event.IControlLink;
+import com.vidyo.vidyoconnector.event.IControlEventHandler;
 import com.vidyo.vidyoconnector.utils.AppUtils;
 import com.vidyo.vidyoconnector.utils.Logger;
 import com.vidyo.vidyoconnector.view.ControlView;
@@ -28,8 +31,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * Conference activity holding all connection and callbacks logic.
  */
-public class VideoConferenceActivity extends FragmentActivity implements Connector.IConnect,
-        Connector.IRegisterLocalCameraEventListener, IControlLink, View.OnLayoutChangeListener {
+public class VideoConferenceActivity extends FragmentActivity implements Connector.IConnect, Connector.IRegisterLocalCameraEventListener,
+        Connector.IRegisterLogEventListener, IControlEventHandler, View.OnLayoutChangeListener {
 
     public static final String PORTAL_KEY = "portal.key";
     public static final String ROOM_KEY = "room.key";
@@ -98,12 +101,14 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
         controlView.registerListener(this);
 
         connector = new Connector(videoView, Connector.ConnectorViewStyle.VIDYO_CONNECTORVIEWSTYLE_Default, 8,
-                "*@VidyoClient info@VidyoConnector info warning", AppUtils.configLogFile(this), 0);
+                "info@VidyoClient info@VidyoConnector info warning", AppUtils.configLogFile(this), 0);
         Logger.i("Connector instance has been created.");
 
         controlView.showVersion(connector.getVersion());
 
         connector.registerLocalCameraEventListener(this);
+
+        connector.registerLogEventListener(this, "info@VidyoClient info@VidyoConnector info warning");
 
         /* Await view availability */
         videoView.addOnLayoutChangeListener(this);
@@ -123,7 +128,7 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
     @Override
     public void onConfigurationChanged(@NonNull Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        updateView();
+        new Handler().postDelayed(this::updateView, DateUtils.SECOND_IN_MILLIS * 2);
     }
 
     @Override
@@ -140,6 +145,7 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
 
     @Override
     public void onFailure(final Connector.ConnectorFailReason connectorFailReason) {
+        Logger.i("onFailure: %s", connectorFailReason.name());
         if (connector != null) connector.unregisterResourceManagerEventListener();
 
         runOnUiThread(() -> {
@@ -156,6 +162,7 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
 
     @Override
     public void onDisconnected(Connector.ConnectorDisconnectReason connectorDisconnectReason) {
+        Logger.i("onDisconnected: %s", connectorDisconnectReason.name());
         if (connector != null) connector.unregisterResourceManagerEventListener();
 
         runOnUiThread(() -> {
@@ -286,14 +293,15 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
 
     @Override
     public void onLocalCameraAdded(LocalCamera localCamera) {
-        Logger.i("Local camera added.");
+        if (localCamera != null) {
+            Logger.i("onLocalCameraAdded: %s", localCamera.name);
+        }
     }
 
     @Override
     public void onLocalCameraSelected(final LocalCamera localCamera) {
-        Logger.i(VideoConferenceActivity.class, "Local camera selected");
-
         if (localCamera != null) {
+            Logger.i("onLocalCameraSelected: %s", localCamera.name);
             this.lastSelectedLocalCamera = localCamera;
         }
     }
@@ -305,7 +313,14 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
 
     @Override
     public void onLocalCameraRemoved(LocalCamera localCamera) {
-        Logger.i("Local camera removed.");
+        if (localCamera != null) {
+            Logger.i("onLocalCameraRemoved: %s", localCamera.name);
+        }
+    }
+
+    @Override
+    public void onLog(LogRecord logRecord) {
+        /* Write log into a custom file */
     }
 
     private void updateView() {

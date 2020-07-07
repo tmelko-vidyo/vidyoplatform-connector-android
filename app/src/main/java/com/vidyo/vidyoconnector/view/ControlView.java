@@ -14,11 +14,11 @@ import androidx.annotation.RequiresApi;
 
 import com.vidyo.vidyoconnector.R;
 import com.vidyo.vidyoconnector.event.ControlEvent;
-import com.vidyo.vidyoconnector.event.IControlLink;
+import com.vidyo.vidyoconnector.event.IControlEventHandler;
 
 public class ControlView extends LinearLayout implements View.OnClickListener {
 
-    private IControlLink callback;
+    private IControlEventHandler callback;
 
     private ImageView connectView;
     private ImageView muteCamera;
@@ -56,7 +56,7 @@ public class ControlView extends LinearLayout implements View.OnClickListener {
         init();
     }
 
-    public void registerListener(IControlLink callback) {
+    public void registerListener(IControlEventHandler callback) {
         this.callback = callback;
     }
 

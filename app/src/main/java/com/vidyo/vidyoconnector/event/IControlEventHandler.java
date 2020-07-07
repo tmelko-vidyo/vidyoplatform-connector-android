@@ -1,6 +1,6 @@
 package com.vidyo.vidyoconnector.event;
 
-public interface IControlLink {
+public interface IControlEventHandler {
 
     void onControlEvent(ControlEvent event);
 }
