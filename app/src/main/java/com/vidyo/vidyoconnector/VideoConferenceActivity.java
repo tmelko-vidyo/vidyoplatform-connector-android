@@ -19,10 +19,13 @@ import com.vidyo.VidyoClient.Connector.Connector;
 import com.vidyo.VidyoClient.Connector.ConnectorPkg;
 import com.vidyo.VidyoClient.Device.Device;
 import com.vidyo.VidyoClient.Device.LocalCamera;
+import com.vidyo.VidyoClient.Device.LocalMicrophone;
+import com.vidyo.VidyoClient.Device.LocalSpeaker;
 import com.vidyo.VidyoClient.Endpoint.LogRecord;
 import com.vidyo.vidyoconnector.event.ControlEvent;
 import com.vidyo.vidyoconnector.event.IControlEventHandler;
 import com.vidyo.vidyoconnector.utils.AppUtils;
+import com.vidyo.vidyoconnector.utils.FontsUtils;
 import com.vidyo.vidyoconnector.utils.Logger;
 import com.vidyo.vidyoconnector.view.ControlView;
 
@@ -31,8 +34,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * Conference activity holding all connection and callbacks logic.
  */
-public class VideoConferenceActivity extends FragmentActivity implements Connector.IConnect, Connector.IRegisterLocalCameraEventListener,
-        Connector.IRegisterLogEventListener, IControlEventHandler, View.OnLayoutChangeListener {
+public class VideoConferenceActivity extends FragmentActivity implements Connector.IConnect,
+        Connector.IRegisterLocalCameraEventListener,
+        Connector.IRegisterLocalMicrophoneEventListener,
+        Connector.IRegisterLocalSpeakerEventListener,
+        Connector.IRegisterLogEventListener,
+        IControlEventHandler, View.OnLayoutChangeListener {
 
     public static final String PORTAL_KEY = "portal.key";
     public static final String ROOM_KEY = "room.key";
@@ -46,8 +53,8 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
     private Connector connector;
     private LocalCamera lastSelectedLocalCamera;
 
-    private AtomicBoolean isCameraDisabledForBackground = new AtomicBoolean(false);
-    private AtomicBoolean isDisconnectAndQuit = new AtomicBoolean(false);
+    private final AtomicBoolean isCameraDisabledForBackground = new AtomicBoolean(false);
+    private final AtomicBoolean isDisconnectAndQuit = new AtomicBoolean(false);
 
     @Override
     public void onStart() {
@@ -101,14 +108,19 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
         controlView.registerListener(this);
 
         connector = new Connector(videoView, Connector.ConnectorViewStyle.VIDYO_CONNECTORVIEWSTYLE_Default, 8,
-                "info@VidyoClient info@VidyoConnector info warning", AppUtils.configLogFile(this), 0);
+                "debug@VidyoClient debug@VidyoConnector info warning", AppUtils.configLogFile(this), 0);
         Logger.i("Connector instance has been created.");
+
+        FontsUtils fontsUtils = new FontsUtils(this);
+        connector.setFontFileName(fontsUtils.fontFile().getPath());
 
         controlView.showVersion(connector.getVersion());
 
         connector.registerLocalCameraEventListener(this);
+        connector.registerLocalMicrophoneEventListener(this);
+        connector.registerLocalSpeakerEventListener(this);
 
-        connector.registerLogEventListener(this, "info@VidyoClient info@VidyoConnector info warning");
+        connector.registerLogEventListener(this, "debug@VidyoClient debug@VidyoConnector info warning");
 
         /* Await view availability */
         videoView.addOnLayoutChangeListener(this);
@@ -335,5 +347,45 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
 
         videoView.addOnLayoutChangeListener(this);
         videoView.requestLayout();
+    }
+
+    @Override
+    public void onLocalMicrophoneAdded(LocalMicrophone localMicrophone) {
+
+    }
+
+    @Override
+    public void onLocalMicrophoneRemoved(LocalMicrophone localMicrophone) {
+
+    }
+
+    @Override
+    public void onLocalMicrophoneSelected(LocalMicrophone localMicrophone) {
+
+    }
+
+    @Override
+    public void onLocalMicrophoneStateUpdated(LocalMicrophone localMicrophone, Device.DeviceState deviceState) {
+
+    }
+
+    @Override
+    public void onLocalSpeakerAdded(LocalSpeaker localSpeaker) {
+
+    }
+
+    @Override
+    public void onLocalSpeakerRemoved(LocalSpeaker localSpeaker) {
+
+    }
+
+    @Override
+    public void onLocalSpeakerSelected(LocalSpeaker localSpeaker) {
+
+    }
+
+    @Override
+    public void onLocalSpeakerStateUpdated(LocalSpeaker localSpeaker, Device.DeviceState deviceState) {
+
     }
 }
