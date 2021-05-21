@@ -22,6 +22,7 @@ import com.vidyo.VidyoClient.Device.LocalCamera;
 import com.vidyo.VidyoClient.Device.LocalMicrophone;
 import com.vidyo.VidyoClient.Device.LocalSpeaker;
 import com.vidyo.VidyoClient.Endpoint.LogRecord;
+import com.vidyo.VidyoClient.Endpoint.Participant;
 import com.vidyo.vidyoconnector.event.ControlEvent;
 import com.vidyo.vidyoconnector.event.IControlEventHandler;
 import com.vidyo.vidyoconnector.utils.AppUtils;
@@ -29,6 +30,7 @@ import com.vidyo.vidyoconnector.utils.FontsUtils;
 import com.vidyo.vidyoconnector.utils.Logger;
 import com.vidyo.vidyoconnector.view.ControlView;
 
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -39,7 +41,8 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
         Connector.IRegisterLocalMicrophoneEventListener,
         Connector.IRegisterLocalSpeakerEventListener,
         Connector.IRegisterLogEventListener,
-        IControlEventHandler, View.OnLayoutChangeListener {
+        IControlEventHandler, View.OnLayoutChangeListener,
+        Connector.IRegisterParticipantEventListener {
 
     public static final String PORTAL_KEY = "portal.key";
     public static final String ROOM_KEY = "room.key";
@@ -96,7 +99,6 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_video_conference);
 
-        ConnectorPkg.initialize();
         ConnectorPkg.setApplicationUIContext(this);
 
         videoView = findViewById(R.id.video_frame);
@@ -119,6 +121,7 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
         connector.registerLocalCameraEventListener(this);
         connector.registerLocalMicrophoneEventListener(this);
         connector.registerLocalSpeakerEventListener(this);
+        connector.registerParticipantEventListener(this);
 
         connector.registerLogEventListener(this, "debug@VidyoClient debug@VidyoConnector info warning");
 
@@ -297,9 +300,7 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
             connector = null;
         }
 
-        ConnectorPkg.uninitialize();
         ConnectorPkg.setApplicationUIContext(null);
-
         Logger.i("Connector instance has been released.");
     }
 
@@ -315,6 +316,9 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
         if (localCamera != null) {
             Logger.i("onLocalCameraSelected: %s", localCamera.name);
             this.lastSelectedLocalCamera = localCamera;
+
+//            localCamera.setTargetBitRate(800000);
+//            localCamera.setMaxConstraint(320, 240, 1_000_000_000 / 5);
         }
     }
 
@@ -386,6 +390,26 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
 
     @Override
     public void onLocalSpeakerStateUpdated(LocalSpeaker localSpeaker, Device.DeviceState deviceState) {
+
+    }
+
+    @Override
+    public void onParticipantJoined(Participant participant) {
+        Logger.i("Participant joined: %s", participant.getUserId());
+    }
+
+    @Override
+    public void onParticipantLeft(Participant participant) {
+        Logger.i("Participant left: %s", participant.getUserId());
+    }
+
+    @Override
+    public void onDynamicParticipantChanged(ArrayList<Participant> arrayList) {
+
+    }
+
+    @Override
+    public void onLoudestParticipantChanged(Participant participant, boolean b) {
 
     }
 }

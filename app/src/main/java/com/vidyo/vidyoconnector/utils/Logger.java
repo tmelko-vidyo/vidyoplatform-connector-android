@@ -10,8 +10,6 @@ public class Logger {
         ERROR, INFO, WARNING
     }
 
-    private static final boolean ENABLED = BuildConfig.DEBUG;
-
     private static final String TAG = "VidyoConnector";
 
     public static void e(String error) {
@@ -58,8 +56,6 @@ public class Logger {
         }
 
         String out = builder.toString();
-
-        if (!ENABLED) return;
 
         switch (logType) {
             case ERROR:

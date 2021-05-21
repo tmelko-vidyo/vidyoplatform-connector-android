@@ -14,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.vidyo.VidyoClient.Connector.ConnectorPkg;
 import com.vidyo.vidyoconnector.connect.ConnectParams;
 
 import java.util.ArrayList;
@@ -40,6 +41,8 @@ public class HomeActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
+
+        ConnectorPkg.initialize();
 
         initCredentials();
 
