@@ -109,4 +109,23 @@ public class AppUtils {
     public static <T> void dump(List<T> list) {
         for (T t : list) Logger.i("Item: %s", t.toString());
     }
+
+    public static boolean isEmulator() {
+        return (Build.MANUFACTURER.contains("Genymotion")
+                || Build.MODEL.contains("google_sdk")
+                || Build.MODEL.toLowerCase().contains("droid4x")
+                || Build.MODEL.contains("Emulator")
+                || Build.MODEL.contains("Android SDK built for x86")
+                || Build.HARDWARE.equalsIgnoreCase("goldfish")
+                || Build.HARDWARE.equalsIgnoreCase("vbox86")
+                || Build.HARDWARE.toLowerCase().contains("nox")
+                || Build.FINGERPRINT.startsWith("generic")
+                || Build.PRODUCT.equalsIgnoreCase("sdk")
+                || Build.PRODUCT.equalsIgnoreCase("google_sdk")
+                || Build.PRODUCT.equalsIgnoreCase("sdk_x86")
+                || Build.PRODUCT.equalsIgnoreCase("vbox86p")
+                || Build.PRODUCT.toLowerCase().contains("nox")
+                || Build.BOARD.toLowerCase().contains("nox")
+                || (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")));
+    }
 }

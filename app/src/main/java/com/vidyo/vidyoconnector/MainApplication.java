@@ -4,6 +4,7 @@ package com.vidyo.vidyoconnector;
 import android.app.Application;
 
 import com.vidyo.vidyoconnector.audio.BluetoothManager;
+import com.vidyo.vidyoconnector.utils.AppUtils;
 
 public class MainApplication extends Application {
 
@@ -12,6 +13,7 @@ public class MainApplication extends Application {
         super.onCreate();
         /* Place some application initialization related code here. */
 
-        BluetoothManager.initBluetoothManager(getApplicationContext());
+        if (!AppUtils.isEmulator())
+            BluetoothManager.initBluetoothManager(getApplicationContext());
     }
 }
