@@ -9,15 +9,17 @@ import android.os.Build;
 
 import androidx.core.content.FileProvider;
 
-import com.vidyo.VidyoClient.BuildConfig;
+import com.vidyo.vidyoconnector.BuildConfig;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
 public class AppUtils {
 
     private static final String LOGS_FOLDER = "VidyoConnectorLogs";
-    private static final String LOG_FILE = "VidyoConnectorLog.log";
+    private static final String LOG_FILE_NAME = "VidyoConnectorLog";
+    private static final String LOG_FILE = LOG_FILE_NAME + ".log";
 
     /**
      * Log file is create individually for every session
@@ -46,14 +48,21 @@ public class AppUtils {
      * @param context {@link Context}
      * @return log file uri.
      */
-    private static Uri logFileUri(Context context) {
+    private static ArrayList<Uri> logFileUri(Context context) {
         File cacheDir = context.getCacheDir();
         File logDir = new File(cacheDir, LOGS_FOLDER);
-        File logFile = new File(logDir, LOG_FILE);
 
-        if (!logFile.exists()) return null;
+        ArrayList<Uri> uris = new ArrayList<>();
 
-        return FileProvider.getUriForFile(context, BuildConfig.APPLICATION_ID + ".file.provider", logFile);
+        for (String file : logDir.list()) {
+            if (file.startsWith(LOG_FILE_NAME)) {
+                File logFile = new File(logDir, file);
+                uris.add(FileProvider.getUriForFile(context, BuildConfig.APPLICATION_ID + ".file.provider", logFile));
+            }
+        }
+
+        Logger.i("Log file uris: " + uris.size());
+        return uris;
     }
 
     private static void deleteRecursive(File fileOrDirectory) {
@@ -68,12 +77,12 @@ public class AppUtils {
      * Send email with log file
      */
     public static void sendLogs(Context context) {
-        Intent intent = new Intent(Intent.ACTION_SEND);
+        Intent intent = new Intent(Intent.ACTION_SEND_MULTIPLE);
         intent.setType("message/rfc822");
         intent.putExtra(Intent.EXTRA_SUBJECT, "Vidyo Connector Sample Logs");
         intent.putExtra(Intent.EXTRA_TEXT, "Logs attached..." + additionalInfo());
 
-        intent.putExtra(Intent.EXTRA_STREAM, logFileUri(context));
+        intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, logFileUri(context));
 
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
