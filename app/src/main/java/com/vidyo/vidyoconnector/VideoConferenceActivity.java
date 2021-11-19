@@ -1,6 +1,5 @@
 package com.vidyo.vidyoconnector;
 
-import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Point;
 import android.os.Bundle;
@@ -29,8 +28,11 @@ import com.vidyo.vidyoconnector.utils.AppUtils;
 import com.vidyo.vidyoconnector.utils.FontsUtils;
 import com.vidyo.vidyoconnector.utils.Logger;
 import com.vidyo.vidyoconnector.view.ControlView;
+import com.vidyo.vidyoconnector.vitel.request.CreateRoomManager;
+import com.vidyo.vidyoconnector.vitel.request.Room;
 
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -58,6 +60,13 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
 
     private final AtomicBoolean isCameraDisabledForBackground = new AtomicBoolean(false);
     private final AtomicBoolean isDisconnectAndQuit = new AtomicBoolean(false);
+
+    private static final long JOIN_MAX_TIMEOUT = 20000;
+    private final CreateRoomManager createRoomManager = new CreateRoomManager();
+    private Room workingRoom = null;
+    private long startConnectionAt = 0;
+    private long startDisconnection = 0;
+    private boolean hasFailed = false;
 
     @Override
     public void onStart() {
@@ -110,7 +119,7 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
         controlView.registerListener(this);
 
         connector = new Connector(videoView, Connector.ConnectorViewStyle.VIDYO_CONNECTORVIEWSTYLE_Default, 8,
-                "debug@VidyoClient debug@VidyoConnector info warning", AppUtils.configLogFile(this), 0);
+                "debug@VidyoClient info@VidyoConnector info warning", AppUtils.configLogFile(this), 0);
         Logger.i("Connector instance has been created.");
 
         FontsUtils fontsUtils = new FontsUtils(this);
@@ -123,10 +132,40 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
         connector.registerLocalSpeakerEventListener(this);
         connector.registerParticipantEventListener(this);
 
-        connector.registerLogEventListener(this, "debug@VidyoClient debug@VidyoConnector info warning");
+        connector.registerLogEventListener(this, "debug@VidyoClient info@VidyoConnector info warning");
 
         /* Await view availability */
         videoView.addOnLayoutChangeListener(this);
+
+        createAndJoinDelayed(generateRandomTime());
+    }
+
+    private long generateRandomTime() {
+        return 1000 + new Random().nextInt(1000);
+    }
+
+    private void createAndJoinDelayed(long ms) {
+        if (hasFailed) return;
+
+        if (this.workingRoom != null && !this.workingRoom.isDeleted()) {
+            Logger.e("Room has not been deleted, Quit loop.");
+            return;
+        }
+
+        Logger.i("Will CREATE room and Join after %dms delay", ms);
+        new Handler().postDelayed(() -> createRoomManager.create(room -> runOnUiThread(() -> {
+            this.workingRoom = room;
+            onControlEvent(new ControlEvent<>(ControlEvent.Call.CONNECT_DISCONNECT, true));
+        })), ms);
+    }
+
+    private void disconnectAndDelete(long ms) {
+        Logger.i("Will DISCONNECT room and delete after %dms delay", ms);
+        new Handler().postDelayed(() -> {
+            createRoomManager.deleteRoom(this.workingRoom, aBoolean
+                    -> runOnUiThread(()
+                    -> onControlEvent(new ControlEvent<>(ControlEvent.Call.CONNECT_DISCONNECT, false))));
+        }, ms);
     }
 
     @Override
@@ -148,6 +187,8 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
 
     @Override
     public void onSuccess() {
+        long took = System.currentTimeMillis() - startConnectionAt;
+        Logger.i("onSuccess. Connection took: %d ms", took);
         runOnUiThread(() -> {
             Toast.makeText(VideoConferenceActivity.this, R.string.connected, Toast.LENGTH_SHORT).show();
             progressBar.setVisibility(View.GONE);
@@ -155,12 +196,23 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
             controlView.connectedCall(true);
             controlView.updateConnectionState(ControlView.ConnectionState.CONNECTED);
             controlView.disable(false);
+
+            if (took > JOIN_MAX_TIMEOUT) {
+                hasFailed = true;
+                Logger.e("Connection took more than 20 sec. Quit test. Analyze...");
+                createRoomManager.release();
+                onControlEvent(new ControlEvent<>(ControlEvent.Call.CONNECT_DISCONNECT, false));
+            } else
+                disconnectAndDelete(generateRandomTime());
         });
     }
 
     @Override
     public void onFailure(final Connector.ConnectorFailReason connectorFailReason) {
-        Logger.i("onFailure: %s", connectorFailReason.name());
+        long took = System.currentTimeMillis() - startConnectionAt;
+        Logger.i("onFailure: %s. With timeout: %d ms", connectorFailReason.name(), took);
+        createRoomManager.release();
+
         if (connector != null) connector.unregisterResourceManagerEventListener();
 
         runOnUiThread(() -> {
@@ -177,10 +229,12 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
 
     @Override
     public void onDisconnected(Connector.ConnectorDisconnectReason connectorDisconnectReason) {
-        Logger.i("onDisconnected: %s", connectorDisconnectReason.name());
+        Logger.i("onDisconnected: %s. Took: %d ms", connectorDisconnectReason.name(), System.currentTimeMillis() - startDisconnection);
         if (connector != null) connector.unregisterResourceManagerEventListener();
 
         runOnUiThread(() -> {
+            createAndJoinDelayed(generateRandomTime());
+
             Toast.makeText(VideoConferenceActivity.this, R.string.disconnected, Toast.LENGTH_SHORT).show();
             progressBar.setVisibility(View.GONE);
 
@@ -203,6 +257,11 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
 
         switch (event.getCall()) {
             case CONNECT_DISCONNECT:
+                if (workingRoom == null) {
+                    Logger.e("Failed to connect. Lack or Room Data?");
+                    return;
+                }
+
                 getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
                 progressBar.setVisibility(View.VISIBLE);
@@ -211,16 +270,26 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
                 controlView.updateConnectionState(state ? ControlView.ConnectionState.CONNECTING : ControlView.ConnectionState.DISCONNECTING);
 
                 if (state) {
-                    Intent intent = getIntent();
+//                    Intent intent = getIntent();
+//
+//                    String portal = intent.getStringExtra(PORTAL_KEY);
+//                    String room = intent.getStringExtra(ROOM_KEY);
+//                    String pin = intent.getStringExtra(PIN_KEY);
+//                    String name = intent.getStringExtra(NAME_KEY);
 
-                    String portal = intent.getStringExtra(PORTAL_KEY);
-                    String room = intent.getStringExtra(ROOM_KEY);
-                    String pin = intent.getStringExtra(PIN_KEY);
-                    String name = intent.getStringExtra(NAME_KEY);
+                    String portal = this.workingRoom.getRoomUrl().split("/join/")[0];
+                    String room = this.workingRoom.getRoomUrl().split("/join/")[1];
+                    String pin = this.workingRoom.getPin();
+                    String name = "Demo Loop Tester";
 
-                    Logger.i("Start connection: %s, %s, %s, %s", portal, room, pin, name);
+                    startConnectionAt = System.currentTimeMillis();
+                    Logger.i("Start connection: %s, %s, %s, %s. Started at: %d ms", portal, room, pin, name, startConnectionAt);
+
                     connector.connectToRoomAsGuest(portal, name, room, pin, this);
                 } else {
+                    startDisconnection = System.currentTimeMillis();
+                    Logger.i("Execute disconnect at: %d ms", startDisconnection);
+
                     if (connector != null) connector.disconnect();
                 }
                 break;
@@ -289,6 +358,8 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        createRoomManager.release();
+
         if (controlView != null) controlView.unregisterListener();
 
         if (connector != null) {
@@ -385,7 +456,6 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
 
     @Override
     public void onLocalSpeakerSelected(LocalSpeaker localSpeaker) {
-
     }
 
     @Override
