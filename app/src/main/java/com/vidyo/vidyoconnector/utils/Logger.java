@@ -2,8 +2,6 @@ package com.vidyo.vidyoconnector.utils;
 
 import android.util.Log;
 
-import com.vidyo.VidyoClient.BuildConfig;
-
 public class Logger {
 
     public enum LogType {
