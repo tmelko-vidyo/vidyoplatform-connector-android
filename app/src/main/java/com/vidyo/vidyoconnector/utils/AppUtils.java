@@ -9,9 +9,14 @@ import android.os.Build;
 
 import androidx.core.content.FileProvider;
 
+import com.vidyo.vidyoconnector.BuildConfig;
+import com.vidyo.vidyoconnector.R;
 import com.vidyo.VidyoClient.BuildConfig;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 
 public class AppUtils {
@@ -99,5 +104,50 @@ public class AppUtils {
 
     public static <T> void dump(List<T> list) {
         for (T t : list) Logger.i("Item: %s", t.toString());
+    }
+
+    public static boolean isEmulator() {
+        return (Build.MANUFACTURER.contains("Genymotion")
+                || Build.MODEL.contains("google_sdk")
+                || Build.MODEL.toLowerCase().contains("droid4x")
+                || Build.MODEL.contains("Emulator")
+                || Build.MODEL.contains("Android SDK built for x86")
+                || Build.HARDWARE.equalsIgnoreCase("goldfish")
+                || Build.HARDWARE.equalsIgnoreCase("vbox86")
+                || Build.HARDWARE.toLowerCase().contains("nox")
+                || Build.FINGERPRINT.startsWith("generic")
+                || Build.PRODUCT.equalsIgnoreCase("sdk")
+                || Build.PRODUCT.equalsIgnoreCase("google_sdk")
+                || Build.PRODUCT.equalsIgnoreCase("sdk_x86")
+                || Build.PRODUCT.equalsIgnoreCase("vbox86p")
+                || Build.PRODUCT.toLowerCase().contains("nox")
+                || Build.BOARD.toLowerCase().contains("nox")
+                || (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")));
+    }
+
+    private static final String CERTIFICATE_RAW_NAME = "ca-certificates.crt";
+
+    public static String writeCaCertificates(Context context) {
+        try {
+            InputStream caCertStream = context.getResources().openRawResource(R.raw.ca_certificates);
+
+            File caCertDirectory = new File(context.getFilesDir() + File.separator);
+            File caFile = new File(caCertDirectory, CERTIFICATE_RAW_NAME);
+
+            FileOutputStream caCertFile = new FileOutputStream(caFile);
+
+            byte[] buffer = new byte[1024];
+            int len;
+
+            while ((len = caCertStream.read(buffer)) != -1) {
+                caCertFile.write(buffer, 0, len);
+            }
+
+            caCertStream.close();
+            caCertFile.close();
+            return caFile.getPath();
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
