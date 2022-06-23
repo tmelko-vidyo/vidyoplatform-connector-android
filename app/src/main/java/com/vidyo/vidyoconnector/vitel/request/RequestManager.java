@@ -1,5 +1,7 @@
 package com.vidyo.vidyoconnector.vitel.request;
 
+import android.content.Context;
+
 import com.squareup.okhttp.Authenticator;
 import com.squareup.okhttp.Callback;
 import com.squareup.okhttp.Credentials;
@@ -9,6 +11,7 @@ import com.squareup.okhttp.Request;
 import com.squareup.okhttp.RequestBody;
 import com.squareup.okhttp.Response;
 import com.squareup.okhttp.ResponseBody;
+import com.vidyo.vidyoconnector.utils.AppUtils;
 import com.vidyo.vidyoconnector.utils.UiUtils;
 import com.vidyo.vidyoconnector.vitel.job.ExecutorImpl;
 import com.vidyo.vidyoconnector.vitel.job.Job;
@@ -21,19 +24,21 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.net.Proxy;
 
+import javax.net.ssl.SSLContext;
+
 public class RequestManager {
 
-    private static final String USER_NAME = "taras";
-    private static final String PASSWORD = "qwer0622";
+    private static final String USER_NAME = "admin";
+    private static final String PASSWORD = "v1dy0123";
 
-    private static final String EXTENSION = "23030";
-    private static final String EXTENSION_PREFIX = "666";
+    private static final String EXTENSION = "8621";
+    private static final String EXTENSION_PREFIX = "0234";
     private static final String ROOM_EXT = EXTENSION + EXTENSION_PREFIX;
 
     private static final String ROOM_PIN = "88888888";
-    private static final String ROOM_NAME = "Test-VitelNet-Room";
+    private static final String ROOM_NAME = "Test-Room";
 
-    private static final String REQUEST_API = "https://test.platform.vidyo.io/services/v1_1/VidyoPortalUserService/";
+    private static final String REQUEST_API = "https://chen-vp1.vidyo.us.rd.eilab.biz/services/v1_1/VidyoPortalUserService/";
 
     private static final String REQUEST_TAG = "Add.Member.Tag";
 
@@ -48,8 +53,10 @@ public class RequestManager {
 
     private boolean canceled;
 
-    public RequestManager() {
+    public RequestManager(Context context) {
         this.okHttpClient = new OkHttpClient();
+        SSLContext sslContext = AppUtils.getSslContextForCertificateFile(context, "ca_certificates.crt");
+        this.okHttpClient.setSslSocketFactory(sslContext.getSocketFactory());
         this.okHttpClient.setAuthenticator(new Authenticator() {
 
             @Override

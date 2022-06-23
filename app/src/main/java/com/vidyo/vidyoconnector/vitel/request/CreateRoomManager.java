@@ -1,5 +1,7 @@
 package com.vidyo.vidyoconnector.vitel.request;
 
+import android.content.Context;
+
 import androidx.lifecycle.Observer;
 
 import com.vidyo.vidyoconnector.utils.Logger;
@@ -13,8 +15,8 @@ public class CreateRoomManager {
 
     private int attempt = 1;
 
-    public CreateRoomManager() {
-        requestManager = new RequestManager();
+    public CreateRoomManager(Context c) {
+        requestManager = new RequestManager(c);
     }
 
     public void create(Observer<Room> callback) {

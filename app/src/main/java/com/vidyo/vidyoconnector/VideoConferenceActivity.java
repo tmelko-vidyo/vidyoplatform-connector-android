@@ -62,7 +62,7 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
     private final AtomicBoolean isDisconnectAndQuit = new AtomicBoolean(false);
 
     private static final long JOIN_MAX_TIMEOUT = 20000;
-    private final CreateRoomManager createRoomManager = new CreateRoomManager();
+    private CreateRoomManager createRoomManager;
     private Room workingRoom = null;
     private long startConnectionAt = 0;
     private long startDisconnection = 0;
@@ -84,6 +84,10 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
 
         if (connector != null && lastSelectedLocalCamera != null && isCameraDisabledForBackground.getAndSet(false)) {
             connector.selectLocalCamera(lastSelectedLocalCamera);
+        }
+
+        if (connector != null) {
+            connector.setCameraPrivacy(true);
         }
     }
 
@@ -118,12 +122,19 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
         controlView = findViewById(R.id.control_view);
         controlView.registerListener(this);
 
+        String logLevel = "warning debug@VidyoClient all@LmiPortalSession " +
+                "all@LmiPortalMembership info@LmiResourceManagerUpdates " +
+                "info@LmiPace info@LmiIce all@LmiSignaling info@VidyoCameraEffect";
+
+        createRoomManager = new CreateRoomManager(this);
         connector = new Connector(videoView, Connector.ConnectorViewStyle.VIDYO_CONNECTORVIEWSTYLE_Default, 8,
-                "debug@VidyoClient info@VidyoConnector info warning", AppUtils.configLogFile(this), 0);
+                logLevel, AppUtils.configLogFile(this), 0);
         Logger.i("Connector instance has been created.");
 
         FontsUtils fontsUtils = new FontsUtils(this);
         connector.setFontFileName(fontsUtils.fontFile().getPath());
+
+        connector.setCertificateAuthorityFile(AppUtils.writeCaCertificates(this));
 
         controlView.showVersion(connector.getVersion());
 
@@ -132,7 +143,7 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
         connector.registerLocalSpeakerEventListener(this);
         connector.registerParticipantEventListener(this);
 
-        connector.registerLogEventListener(this, "debug@VidyoClient info@VidyoConnector info warning");
+        connector.registerLogEventListener(this, logLevel);
 
         /* Await view availability */
         videoView.addOnLayoutChangeListener(this);
@@ -154,6 +165,10 @@ public class VideoConferenceActivity extends FragmentActivity implements Connect
 
         Logger.i("Will CREATE room and Join after %dms delay", ms);
         new Handler().postDelayed(() -> createRoomManager.create(room -> runOnUiThread(() -> {
+            if (room == null) {
+                Toast.makeText(VideoConferenceActivity.this, "Failed to create a room on flight", Toast.LENGTH_SHORT).show();
+                return;
+            }
             this.workingRoom = room;
             onControlEvent(new ControlEvent<>(ControlEvent.Call.CONNECT_DISCONNECT, true));
         })), ms);
